@@ -181,7 +181,7 @@ class Emulator:
                             self.registers[x] = self.registers[y]
 
                         tmp = self.registers[x]
-                        self.registers[x] <<= 1
+                        self.registers[x] = (self.registers[x] << 1) & 0xFF
                         self.registers[15] = (
                             tmp & 0b10000000
                         ) >> 7  # VF = shifted out bit
