@@ -85,7 +85,7 @@ class Emulator:
         self.stack = Stack()
         self.delay = 0
         self.sound = 0
-        self.key_pressed = True
+        self.key_pressed = False
 
         self.tick = 0
 
