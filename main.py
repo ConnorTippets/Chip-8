@@ -271,13 +271,13 @@ class Emulator:
                         for i, digit in enumerate(digits):
                             self.mem.write(self.index + i, digit)
                     case 0x55:  # FX55: write registers to memory at index
-                        for i in range(x):
+                        for i in range(x + 1):
                             self.mem.write(self.index + i, self.registers[i])
 
                         if ORIGINAL_STR_IMPL:
                             self.index += x + 1
                     case 0x65:  # FX65: load registers from memory at index
-                        for i in range(x):
+                        for i in range(x + 1):
                             self.registers[i] = self.mem.read(self.index + i)
 
                         if ORIGINAL_STR_IMPL:
