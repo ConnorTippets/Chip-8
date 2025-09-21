@@ -337,7 +337,7 @@ def main():
         emu.delay = max(emu.delay - 1, 0)
         emu.sound = max(emu.sound - 1, 0)
 
-        time.sleep((1 / 60) - (frame_end - frame_start))
+        time.sleep((1 / 60) - max(0, frame_end - frame_start))
 
 
 if __name__ == "__main__":
