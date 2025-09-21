@@ -1,3 +1,5 @@
+import pygame
+
 TOTAL_MEM = 4096
 SCREEN_RES_X = 64
 SCREEN_RES_Y = 32
@@ -5,5 +7,6 @@ PIXEL_SCALE = 20
 ORIGINAL_SHIFT_IMPL = False
 ORIGINAL_JWO_IMPL = False
 ORIGINAL_ATI_IMPL = True
-ORIGINAL_GK_IMPL = False
+ORIGINAL_GK_IMPL = True
 ORIGINAL_STR_IMPL = False
+KEY_CODES = [pygame.key.key_code(name) for name in list("0123456789ABCDEF")]
