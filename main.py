@@ -2,7 +2,7 @@ import typing
 import time
 import sys
 
-from PIL import Image, ImageDraw
+import pygame
 
 from constants import TOTAL_MEM, SCREEN_RES_X, SCREEN_RES_Y, PIXEL_SCALE
 from util import iter_bits
@@ -70,7 +70,6 @@ class Emulator:
         self.delay = 0
         self.sound = 0
 
-        self.screen_timer = 60
         self.tick = 0
 
         self.registers = [
@@ -79,10 +78,7 @@ class Emulator:
 
         self.reset_screen()
 
-        self.image = Image.new(
-            "RGB", (SCREEN_RES_X * PIXEL_SCALE, SCREEN_RES_Y * PIXEL_SCALE)
-        )
-        self.draw = ImageDraw.Draw(self.image)
+        self.surface = pygame.Surface((SCREEN_RES_X, SCREEN_RES_Y))
 
     def draw_screen(self):
         for y, _ in enumerate(self.screen_buff):
@@ -90,87 +86,68 @@ class Emulator:
                 if not pix:
                     continue
 
-                self.draw.rectangle(
-                    (
-                        x * PIXEL_SCALE,
-                        y * PIXEL_SCALE,
-                        x * PIXEL_SCALE + PIXEL_SCALE,
-                        y * PIXEL_SCALE + PIXEL_SCALE,
-                    ),
-                    "white",
-                )
+                self.surface.set_at((x, y), "white")
 
-        self.image.save(f"./img{self.tick}.png")
+    def step(self):
+        instr = self.mem.read_word(self.pc)
+        self.pc += 2
 
-    def mainloop(self):
-        while True:
-            instr = self.mem.read_word(self.pc)
-            self.pc += 2
+        nibs = [
+            (instr & 0b1111000000000000) >> 12,
+            (instr & 0b0000111100000000) >> 8,
+            (instr & 0b0000000011110000) >> 4,
+            (instr & 0b0000000000001111),
+        ]
 
-            nibs = [
-                (instr & 0b1111000000000000) >> 12,
-                (instr & 0b0000111100000000) >> 8,
-                (instr & 0b0000000011110000) >> 4,
-                (instr & 0b0000000000001111),
-            ]
+        instr_type = nibs[0]
+        x = nibs[1]
+        y = nibs[2]
+        n = nibs[3]
+        immediate_number = (nibs[2] << 4) | nibs[3]
+        immediate_address = (nibs[1] << 8) | (nibs[2] << 4) | nibs[3]
 
-            instr_type = nibs[0]
-            x = nibs[1]
-            y = nibs[2]
-            n = nibs[3]
-            immediate_number = (nibs[2] << 4) | nibs[3]
-            immediate_address = (nibs[1] << 8) | (nibs[2] << 4) | nibs[3]
+        match instr_type:
+            case 0:
+                if instr == 0x00E0:  # 00E0: clear screen
+                    self.reset_screen()
+            case 1:
+                self.pc = immediate_address  # 1NNN: jump to NNN
+            case 6:  # 6XNN: set register X to NN
+                self.registers[x] = immediate_number
+            case 7:  # 7XNN: add NN to register X
+                self.registers[x] = (self.registers[x] + immediate_number) % 256
+            case 10:
+                self.i = immediate_address  # AXNN: set index register to NNN
+            case 13:  # DXYN: display
+                og_x_coord = self.registers[x] % SCREEN_RES_X
+                x_coord = og_x_coord
+                y_coord = self.registers[y] % SCREEN_RES_Y
+                self.registers[15] = 0
 
-            match instr_type:
-                case 0:
-                    if instr == 0x00E0:  # 00E0: clear screen
-                        self.reset_screen()
-                case 1:
-                    self.pc = immediate_address  # 1NNN: jump to NNN
-                case 6:  # 6XNN: set register X to NN
-                    self.registers[x] = immediate_number
-                case 7:  # 7XNN: add NN to register X
-                    self.registers[x] = (self.registers[x] + immediate_number) % 256
-                case 10:
-                    self.i = immediate_address  # AXNN: set index register to NNN
-                case 13:  # DXYN: display
-                    og_x_coord = self.registers[x] % SCREEN_RES_X
+                for row in range(n):
+                    if y_coord >= SCREEN_RES_Y:
+                        break
+
+                    row_data = self.mem.read(self.i + row)
                     x_coord = og_x_coord
-                    y_coord = self.registers[y] % SCREEN_RES_Y
-                    self.registers[15] = 0
-
-                    for row in range(n):
-                        if y_coord >= SCREEN_RES_Y:
+                    for bit in iter_bits(row_data):
+                        if x_coord >= SCREEN_RES_X:
                             break
 
-                        row_data = self.mem.read(self.i + row)
-                        x_coord = og_x_coord
-                        for bit in iter_bits(row_data):
-                            if x_coord >= SCREEN_RES_X:
-                                break
+                        pix = self.screen_buff[y_coord][x_coord]
 
-                            pix = self.screen_buff[y_coord][x_coord]
+                        if bit and pix:
+                            self.screen_buff[y_coord][x_coord] = 0
+                            self.registers[15] = 1
+                        if bit and not pix:
+                            self.screen_buff[y_coord][x_coord] = 1
 
-                            if bit and pix:
-                                self.screen_buff[y_coord][x_coord] = 0
-                                self.registers[15] = 1
-                            if bit and not pix:
-                                self.screen_buff[y_coord][x_coord] = 1
+                        x_coord += 1
+                    y_coord += 1
+            case _:
+                print(bin(instr))
 
-                            x_coord += 1
-                        y_coord += 1
-                case _:
-                    print(bin(instr))
-
-            if self.tick % (700 // 60) == 0:
-                self.screen_timer -= 1
-
-            if self.screen_timer == 0:
-                self.screen_timer = 60
-                self.draw_screen()
-
-            self.tick += 1
-            time.sleep(1 / 700)  # 700 instructions per sec
+        self.tick += 1
 
 
 def main():
@@ -182,12 +159,36 @@ def main():
     with open(fname, "rb") as handle:
         bytes_raw = handle.read()
 
-    # mem = Memory([97, 1])
-    # print(mem.read_bytes_at_continuous(512, 2))
-
     mem = Memory(list(bytes_raw))
+
+    screen, clock = (
+        pygame.display.set_mode(
+            (SCREEN_RES_X * PIXEL_SCALE, SCREEN_RES_Y * PIXEL_SCALE)
+        ),
+        pygame.time.Clock(),
+    )
+
     emu = Emulator(mem)
-    emu.mainloop()
+
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+
+        frame_start = time.perf_counter()
+
+        for i in range(700 // 60):
+            emu.step()
+
+        frame_end = time.perf_counter()
+
+        emu.draw_screen()
+
+        pygame.transform.scale_by(emu.surface, PIXEL_SCALE, screen)
+        pygame.display.flip()
+
+        time.sleep((1 / 60) - (frame_end - frame_start))
 
 
 if __name__ == "__main__":
