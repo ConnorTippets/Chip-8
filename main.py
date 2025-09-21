@@ -34,18 +34,10 @@ class Memory:
     def read(self, i: int) -> int:
         return self.mem[i]
 
-    def read_bytes_at(self, i: int, amt: int = 1) -> list[int]:
-        return self.mem[i : i + amt]
+    def read_word(self, i: int) -> int:
+        raw = self.mem[i : i + 2]
 
-    def read_bytes_at_continuous(self, i: int, amt: int = 1) -> int:
-        raw = self.read_bytes_at(i, amt)
-        raw.reverse()
-
-        num = 0
-        for i, b in enumerate(raw):
-            num += b << (i * 8)
-
-        return num
+        return (raw[0] << 8) | raw[1]
 
 
 class Stack:
@@ -112,7 +104,7 @@ class Emulator:
 
     def mainloop(self):
         while True:
-            instr = self.mem.read_bytes_at_continuous(self.pc, 2)
+            instr = self.mem.read_word(self.pc)
             self.pc += 2
 
             nibs = [
@@ -126,8 +118,8 @@ class Emulator:
             x = nibs[1]
             y = nibs[2]
             n = nibs[3]
-            immediate_number = (nibs[2] << 4) + nibs[3]
-            immediate_address = (nibs[1] << 8) + (nibs[2] << 4) + nibs[3]
+            immediate_number = (nibs[2] << 4) | nibs[3]
+            immediate_address = (nibs[1] << 8) | (nibs[2] << 4) | nibs[3]
 
             match instr_type:
                 case 0:
