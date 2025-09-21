@@ -20,27 +20,26 @@ from util import iter_bits
 
 
 class Memory:
-    def __init__(
-        self,
-        bytes_in: typing.Union[list[int], None] = None,
-    ):
-        if bytes_in == None:
-            self.mem = [
+    def __init__(self, bytes_in: list[int], font_bytes: list[int]):
+        remaining = max(0, TOTAL_MEM - len(bytes_in) - 512)
+        remaining_fnt = max(0, 512 - len(font_bytes) - 0x50)
+
+        self.mem = (
+            [
                 0,
-            ] * TOTAL_MEM
-        else:
-            remaining = max(0, TOTAL_MEM - len(bytes_in) - 512)
-            self.mem = (
-                [
-                    0,
-                ]
-                * 512
-                + bytes_in
-                + [
-                    0,
-                ]
-                * remaining
-            )
+            ]
+            * 0x50
+            + font_bytes
+            + [
+                0,
+            ]
+            * remaining_fnt
+            + bytes_in
+            + [
+                0,
+            ]
+            * remaining
+        )
 
     def read(self, i: int) -> int:
         return self.mem[i]
@@ -263,6 +262,16 @@ class Emulator:
                                 self.pc -= 2
                                 pass
                             self.key_pressed = False
+
+                            print(hex(self.registers[x]), self.key_pressed)
+                        case 0x29:  # FX29: set index register to address of character
+                            self.i = (
+                                list("0123456789ABCDEF").index(
+                                    hex(self.registers[x])[-1]
+                                )
+                                * 5
+                                + 0x50
+                            )
                     case 0x33:  # FX33: split register X into digits
                         digits = list(
                             map(int, list(str(self.registers[x])))
