@@ -6,6 +6,7 @@ import random
 import pygame
 
 pygame.init()
+pygame.mixer.init()
 
 from constants import (
     TOTAL_MEM,
@@ -258,7 +259,7 @@ class Emulator:
                         case 0x15:  # FX15: set delay timer to register X
                             self.delay = self.registers[x]
                         case 0x18:  # FX18: set sound timer to register X
-                            self.delay = self.registers[x]
+                            self.sound = self.registers[x]
                         case 0x1E:  # FX1E: add register X to index register
                             tmp = self.index + self.registers[x]
 
@@ -277,8 +278,6 @@ class Emulator:
                                     self.pc -= 2
                                     raise _MyBreak()
                                 self.key_pressed = False
-
-                            print(hex(self.registers[x]), self.key_pressed)
                         case 0x29:  # FX29: set index register to address of character
                             self.i = (
                                 list("0123456789ABCDEF").index(
@@ -318,7 +317,7 @@ class Emulator:
 
 
 def main():
-    if len(sys.argv) < 3:
+    if len(sys.argv) < 4:
         print("fuck you")
         sys.exit(1)
 
@@ -330,11 +329,15 @@ def main():
     with open(ftname, "r") as handle:
         font_bytes = [int(hexstr.strip(), 16) for hexstr in handle.readlines()]
 
+    bpname = sys.argv[3]
+
     mem = Memory(list(bytes_raw), font_bytes)
 
     screen = pygame.display.set_mode(
         (SCREEN_RES_X * PIXEL_SCALE, SCREEN_RES_Y * PIXEL_SCALE)
     )
+
+    beep = pygame.mixer.Sound(bpname)
 
     emu = Emulator(mem)
 
@@ -344,20 +347,19 @@ def main():
                 pygame.quit()
                 sys.exit()
 
-        frame_start = time.perf_counter()
-
         keys_raw = pygame.key.get_pressed()
         keys = [keys_raw[key_code] for key_code in KEY_CODES]
 
         for i in range(700 // 60):
             emu.step(keys)
 
-        frame_end = time.perf_counter()
-
         emu.draw_screen()
 
         pygame.transform.scale_by(emu.surface, PIXEL_SCALE, screen)
         pygame.display.flip()
+
+        if emu.sound > 0 and not pygame.mixer.get_busy():
+            beep.play()
 
         emu.delay = max(emu.delay - 1, 0)
         emu.sound = max(emu.sound - 1, 0)
