@@ -106,6 +106,7 @@ class Emulator:
         for y, _ in enumerate(self.screen_buff):
             for x, pix in enumerate(_):
                 if not pix:
+                    self.surface.set_at((x, y), "black")
                     continue
 
                 self.surface.set_at((x, y), "white")
