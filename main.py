@@ -267,6 +267,9 @@ class Emulator:
                         digits = list(
                             map(int, list(str(self.registers[x])))
                         )  # evil fuckery
+                        digits = [
+                            0,
+                        ] * (3 - len(digits)) + digits
 
                         for i, digit in enumerate(digits):
                             self.mem.write(self.index + i, digit)
