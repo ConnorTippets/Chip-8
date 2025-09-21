@@ -115,7 +115,7 @@ class Emulator:
             case 6:  # 6XNN: set register X to NN
                 self.registers[x] = immediate_number
             case 7:  # 7XNN: add NN to register X
-                self.registers[x] = (self.registers[x] + immediate_number) % 256
+                self.registers[x] = (self.registers[x] + immediate_number) & 0xFF
             case 10:
                 self.i = immediate_address  # AXNN: set index register to NNN
             case 13:  # DXYN: display
