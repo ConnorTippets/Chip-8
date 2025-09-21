@@ -76,6 +76,8 @@ class Emulator:
             for x in range(SCREEN_RES_X):
                 self.screen_buff[y].append(0)
 
+        self.surface = pygame.Surface((SCREEN_RES_X, SCREEN_RES_Y))
+
     def reset(self, mem: Memory):
         self.mem = mem
         self.pc = 512
@@ -92,8 +94,6 @@ class Emulator:
         ] * 16
 
         self.reset_screen()
-
-        self.surface = pygame.Surface((SCREEN_RES_X, SCREEN_RES_Y))
 
     def draw_screen(self):
         for y, _ in enumerate(self.screen_buff):
