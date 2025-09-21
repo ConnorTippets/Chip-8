@@ -256,13 +256,13 @@ class Emulator:
                         if not any(keys) and not self.key_pressed:
                             self.pc -= 2
                         else:
-                            self.key_pressed = keys.index(True)
+                            if self.key_pressed is False:
+                                self.key_pressed = keys.index(True)
+                                self.registers[x] = self.key_pressed
                             if keys[self.key_pressed] and ORIGINAL_GK_IMPL:
                                 self.pc -= 2
                                 pass
                             self.key_pressed = False
-
-                        self.registers[x] = keys.index(True)
                     case 0x33:  # FX33: split register X into digits
                         digits = list(
                             map(int, list(str(self.registers[x])))
