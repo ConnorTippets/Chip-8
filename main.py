@@ -249,7 +249,7 @@ class Emulator:
                     case 0x1E:  # FX1E: add register X to index register
                         tmp = self.index + self.registers[x]
 
-                        self.index = tmp & TOTAL_MEM
+                        self.index = tmp
                         if tmp > TOTAL_MEM and not ORIGINAL_ATI_IMPL:
                             self.registers[15] = 1
                     case 0x0A:  # FX0A: block until key is pressed
