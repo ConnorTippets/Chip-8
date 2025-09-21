@@ -168,7 +168,7 @@ class Emulator:
                         tmp = a - b
 
                         self.registers[x] = tmp & 0xFF
-                        self.registers[15] = int(a > b)  # VF = carry bit
+                        self.registers[15] = int(a >= b)  # VF = carry bit
                     case 6:  # 8XY6: shift register X 1 bit right
                         if ORIGINAL_SHIFT_IMPL:
                             self.registers[x] = self.registers[y]
